@@ -89,7 +89,7 @@ func validateArgs() {
 		errorAndExit("--keyword option is required")
 	}
 	if !gradle && !maven {
-		errorAndExit("Either --gradle or maven option is required")
+		errorAndExit("Either --gradle or --maven option is required")
 	}
 	if gradle && maven {
 		errorAndExit("--gradle and --maven options are mutually exclusive")
