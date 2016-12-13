@@ -25,9 +25,10 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"log"
+	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 )
 
 const (
@@ -36,6 +37,8 @@ const (
 
 var (
 	keyword string
+	gradle  bool
+	maven   bool
 )
 
 type searchResult struct {
@@ -61,19 +64,41 @@ func search(keyword string) error {
 		return err
 	}
 	for _, doc := range searchResult.Response.Docs {
-		log.Println(doc.Group + ":" + doc.Artifact + ":" + doc.Version)
+		if gradle {
+			fmt.Println(fmt.Sprintf("%s:%s:%s", doc.Group, doc.Artifact, doc.Version))
+		} else if maven {
+			fmt.Println(fmt.Sprintf(`<dependency>
+    <groupId>%s</groupId>
+    <artifactId>%s</artifactId>
+    <version>%s</version>
+</dependency>`, doc.Group, doc.Artifact, doc.Version))
+			fmt.Println()
+		}
 	}
 	return nil
 }
 
 func init() {
 	flag.StringVar(&keyword, "keyword", "", "Search keyword")
+	flag.BoolVar(&gradle, "gradle", false, "Gradle format")
+	flag.BoolVar(&maven, "maven", false, "Maven format")
 }
 
 func validateArgs() {
 	if len(keyword) == 0 {
-		log.Fatal("--keyword option is required")
+		errorAndExit("--keyword option is required")
 	}
+	if !gradle && !maven {
+		errorAndExit("Either --gradle or maven option is required")
+	}
+	if gradle && maven {
+		errorAndExit("--gradle and --maven options are mutually exclusive")
+	}
+}
+
+func errorAndExit(msg interface{}) {
+	fmt.Println("Error:", msg)
+	os.Exit(1)
 }
 
 func main() {
@@ -81,6 +106,6 @@ func main() {
 	validateArgs()
 	err := search(keyword)
 	if err != nil {
-		log.Fatal(err)
+		errorAndExit(err)
 	}
 }
