@@ -11,6 +11,5 @@ Maven search command line tool.
 ```
 Options:
   --keyword <string>  Search keyword
-  --gradle            Display in Gradle format
-  --maven             Display in Maven format
+  --type              Build type: gradle, maven, or sbt (default "gradle")
 ```

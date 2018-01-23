@@ -36,9 +36,8 @@ const (
 )
 
 var (
-	keyword string
-	gradle  bool
-	maven   bool
+	keyword   string
+	buildType string
 )
 
 type searchResult struct {
@@ -51,7 +50,7 @@ type searchResult struct {
 	} `json:"response"`
 }
 
-func search(keyword string) error {
+func search(keyword, buildType string) error {
 	res, err := http.Get(mavenURL + url.QueryEscape(keyword))
 	if err != nil {
 		return err
@@ -64,15 +63,18 @@ func search(keyword string) error {
 		return err
 	}
 	for _, doc := range searchResult.Response.Docs {
-		if gradle {
+		if buildType == "gradle" {
 			fmt.Println(fmt.Sprintf("%s:%s:%s", doc.Group, doc.Artifact, doc.Version))
-		} else if maven {
+		} else if buildType == "maven" {
 			fmt.Println(fmt.Sprintf(`<dependency>
     <groupId>%s</groupId>
     <artifactId>%s</artifactId>
     <version>%s</version>
 </dependency>`, doc.Group, doc.Artifact, doc.Version))
 			fmt.Println()
+		} else if buildType == "sbt" {
+			fmt.Println(fmt.Sprintf(`libraryDependencies += "%s" %% "%s" %% "%s"`,
+				doc.Group, doc.Artifact, doc.Version))
 		}
 	}
 	return nil
@@ -80,19 +82,19 @@ func search(keyword string) error {
 
 func init() {
 	flag.StringVar(&keyword, "keyword", "", "Search keyword")
-	flag.BoolVar(&gradle, "gradle", false, "Gradle format")
-	flag.BoolVar(&maven, "maven", false, "Maven format")
+	flag.StringVar(&buildType, "type", "gradle", "Build type: gradle, maven, or sbt")
 }
 
 func validateArgs() {
+	if len(os.Args) == 1 {
+		flag.PrintDefaults()
+		os.Exit(0)
+	}
 	if len(keyword) == 0 {
 		errorAndExit("--keyword option is required")
 	}
-	if !gradle && !maven {
-		errorAndExit("Either --gradle or --maven option is required")
-	}
-	if gradle && maven {
-		errorAndExit("--gradle and --maven options are mutually exclusive")
+	if buildType != "gradle" && buildType != "maven" && buildType != "sbt" {
+		errorAndExit("Valid --type option values: [gradle, maven, sbt]")
 	}
 }
 
@@ -104,7 +106,7 @@ func errorAndExit(msg interface{}) {
 func main() {
 	flag.Parse()
 	validateArgs()
-	err := search(keyword)
+	err := search(keyword, buildType)
 	if err != nil {
 		errorAndExit(err)
 	}
